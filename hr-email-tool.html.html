@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Email Responder - Quick Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // I copied this gradient design from dribbble.com 
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter, system-ui, sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Email clients hate full width so centering it like this */
+        .preview-body { 
+            background-color: #f8fafc; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 1.25rem;
+        }
+        /* Mobile preview needs less padding */
+        @media (max-width: 640px) {
+            .preview-body { padding: 1rem; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-8 px-4 sm:px-6 lg:px-8">
+    
+    <!-- main container with extra shadow cause it looks premium -->
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl ring-1 ring-gray-200/50">
+        
+        <!-- header gradient - I copied this gradient design from dribbble.com -->
+        <div class="p-8 border-b border-gray-200 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 rounded-t-2xl">
+            <h1 class="text-3xl font-bold text-white drop-shadow-md">HR Email Responder</h1>
+            <p class="mt-2 text-blue-100 text-lg">Quick replies for job apps, interviews & more</p>
+        </div>
+
+        <!-- form section - keeping inputs in 2 column grid -->
+        <div class="p-8 space-y-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 mb-3">Template Type</label>
+                    <select id="template" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        <option value="ack">✅ Application Acknowledged</option>
+                        <option value="invite">📅 Interview Invite</option>
+                        <option value="reject">❌ Polite Rejection</option>
+                        <option value="offer">🎉 Job Offer</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 mb-3">Candidate Name</label>
+                    <input type="text" id="name" placeholder="John Doe" value="Diwakar Panda" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 mb-3">Job Position</label>
+                    <input type="text" id="position" placeholder="Software Engineer" value="Web Developer" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 mb-3">Date/Details</label>
+                    <input type="text" id="details" placeholder="next Tuesday at 2 PM IST" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- custom message with better placeholder -->
+            <div class="space-y-2">
+                <label class="block text-sm font-semibold text-gray-900">Custom Message (optional)</label>
+                <textarea id="custom" rows="3" placeholder="Any additional notes go here... will show as highlighted box in ack/reject templates" 
+                    class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 resize-vertical transition-all"></textarea>
+            </div>
+
+            <!-- buttons with hover effects that actually feel good -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-2">
+                <button onclick="generateEmail()" 
+                    class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
+                    🔍 Preview Email
+                </button>
+                <button onclick="copyEmail()" id="copyBtn" disabled 
+                    class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-4 px-6 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200">
+                    📋 Copy HTML
+                </button>
+            </div>
+        </div>
+
+        <!-- preview section - hidden by default -->
+        <div id="preview" class="hidden p-8 border-t border-gray-200 bg-gradient-to-b from-white to-gray-50 rounded-b-2xl">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-900">📧 Email Preview</h2>
+                <button onclick="togglePreview()" class="text-xl font-bold text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-200 rounded-full transition-all">&times;</button>
+            </div>
+            <div id="emailPreview" class="preview-body bg-white border-2 border-gray-200 rounded-2xl shadow-xl p-8 max-h-96 overflow-y-auto">
+                <div class="text-center text-gray-500 py-12">Click Preview to see your email</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Email templates - had to use inline styles cause email clients don't support external CSS
+        const templates = {
+            ack: (name, position, details, custom) => `
+                <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:600px;margin:0 auto;background:#fff;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,0.1)">
+                    <div style="background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);padding:30px 24px;text-align:center">
+                        <h1 style="color:white;font-size:28px;font-weight:800;margin:0 0 8px;font-family:'Segoe UI',sans-serif">📩 Application Received</h1>
+                        <p style="color:#bfdbfe;font-size:16px;margin:0">Thank you for applying with us</p>
+                    </div>
+                    <div style="padding:32px 28px">
+                        <p style="font-size:17px;line-height:1.7;color:#1f2937;margin:0 0 20px;font-weight:500">Hi <strong style="color:#1e40af">${name}</strong>,</p>
+                        <p style="font-size:16px;line-height:1.6;color:#4b5563;margin:0 0 28px">Thank you for applying to the <strong style="color:#1e40af">${position}</strong> role. 
+                        We have received your application and our team will review it within 3-5 business days.</p>
+                        ${custom ? `<div style="background:#eff6ff;border-left:5px solid #3b82f6;padding:20px;margin:24px 0;border-radius:0 8px 8px 0">
+                            <p style="font-size:16px;line-height:1.6;color:#1e40af;margin:0">${custom}</p>
+                        </div>` : ''}
+                        <p style="font-size:15px;line-height:1.5;color:#6b7280;margin:32px 0 0;font-style:italic">
+                            Best regards,<br><strong>HR Team</strong>
+                        </p>
+                    </div>
+                </div>
+            `,
+            // ... other templates remain same (keeping code shorter)
+            invite: (name, position, details, custom) => `
+                <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:600px;margin:0 auto;background:#fff;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,0.1)">
+                    <div style="background:linear-gradient(135deg,#10b981 0%,#047857 100%);padding:30px 24px;text-align:center">
+                        <h1 style="color:white;font-size:28px;font-weight:800;margin:0 0 8px">🎯 Interview Invite</h1>
+                        <p style="color:#6ee7b7;font-size:16px;margin:0">We're excited to talk with you!</p>
+                    </div>
+                    <div style="padding:32px 28px">
+                        <p style="font-size:17px;line-height:1.7;color:#1f2937;margin:0 0 20px;font-weight:500">Hi <strong style="color:#059669">${name}</strong>,</p>
+                        <p style="font-size:16px;line-height:1.6;color:#4b5563;margin:0 0 12px">Great news! We'd love to invite you for an interview for <strong style="color:#059669">${position}</strong>.</p>
+                        <div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:24px;margin:20px 0">
+                            <p style="font-size:18px;font-weight:700;color:#166534;margin:0 0 8px">📅 Interview Details</p>
+                            <p style="font-size:16px;color:#065f46;margin:0">${details}</p>
+                        </div>
+                        ${custom ? `<p style="font-size:16px;line-height:1.6;color:#4b5563;margin:24px 0">${custom}</p>` : ''}
+                        <p style="font-size:15px;line-height:1.5;color:#6b7280;margin:32px 0 0">
+                            Looking forward to speaking with you!<br><strong>HR Team</strong>
+                        </p>
+                    </div>
+                </div>
+            `,
+            reject: (name, position, details, custom) => `
+                <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:600px;margin:0 auto;background:#fff;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,0.1)">
+                    <div style="background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%);padding:30px 24px;text-align:center">
+                        <h1 style="color:white;font-size:28px;font-weight:800;margin:0 0 8px">📋 Application Update</h1>
+                        <p style="color:#fecaca;font-size:16px;margin:0">Thank you for your interest</p>
+                    </div>
+                    <div style="padding:32px 28px">
+                        <p style="font-size:17px;line-height:1.7;color:#1f2937;margin:0 0 20px;font-weight:500">Hi <strong style="color:#dc2626">${name}</strong>,</p>
+                        <p style="font-size:16px;line-height:1.6;color:#4b5563;margin:0 0 28px">
+                            Thank you for applying to <strong style="color:#dc2626">${position}</strong>. After careful review, 
+                            we've decided to move forward with other candidates who more closely match our current requirements.
+                        </p>
+                        ${custom ? `<div style="background:#fef2f2;border-left:5px solid #ef4444;padding:20px;margin:24px 0;border-radius:0 8px 8px 0">
+                            <p style="font-size:16px;line-height:1.6;color:#991b1b;margin:0">${custom}</p>
+                        </div>` : ''}
+                        <p style="font-size:15px;line-height:1.5;color:#6b7280;margin:32px 0 0;font-style:italic">
+                            Keep applying—we wish you continued success!<br><strong>HR Team</strong>
+                        </p>
+                    </div>
+                </div>
+            `,
+            offer: (name, position, details, custom) => `
+                <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:600px;margin:0 auto;background:#fff;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.15)">
+                    <div style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);padding:35px 28px;text-align:center">
+                        <h1 style="color:white;font-size:32px;font-weight:800;margin:0 0 12px">🎉 Job Offer!</h1>
+                        <p style="color:#fde68a;font-size:18px;margin:0;font-weight:500">Congratulations ${name}!</p>
+                    </div>
+                    <div style="padding:36px 32px">
+                        <p style="font-size:18px;line-height:1.7;color:#1f2937;margin:0 0 24px;font-weight:600">Hi <strong style="color:#d97706">${name}</strong>,</p>
+                        <p style="font-size:17px;line-height:1.6;color:#4b5563;margin:0 0 28px">
+                            We're excited to offer you the <strong style="color:#d97706;font-size:18px">${position}</strong> position! 
+                            Here are the key details:
+                        </p>
+                        <div style="background:#fffbeb;border:2px solid #fcd34d;border-radius:12px;padding:28px;margin:24px 0">
+                            <p style="font-size:18px;font-weight:700;color:#92400e;margin:0 0 12px">📄 Offer Details</p>
+                            <p style="font-size:16px;color:#7c2d12;margin:0;line-height:1.6">${details}</p>
+                        </div>
+                        ${custom ? `<p style="font-size:16px;line-height:1.6;color:#4b5563;margin:28px 0">${custom}</p>` : ''}
+                        <p style="font-size:16px;line-height:1.5;color:#6b7280;margin:36px 0 0;font-weight:500">
+                            Please reply to this email to accept the offer.<br><strong>HR Team</strong>
+                        </p>
+                    </div>
+                </div>
+            `
+        };
+
+        // main preview function - called when Preview button is clicked
+        function generateEmail() {
+            try {
+                // grab all form values - added .trim() to remove extra spaces
+                const template = document.getElementById('template').value;
+                const name = document.getElementById('name').value.trim() || 'Candidate';
+                const position = document.getElementById('position').value.trim() || 'the role';
+                const details = document.getElementById('details').value.trim() || '';
+                const custom = document.getElementById('custom').value.trim();
+
+                // create HTML from selected template
+                const html = templates[template](name, position, details, custom);
+                document.getElementById('emailPreview').innerHTML = html;
+                
+                // show preview section and enable copy button
+                document.getElementById('preview').classList.remove('hidden');
+                document.getElementById('copyBtn').disabled = false;
+                
+                // The smooth scroll doesn't work properly on mobile phones
+                document.getElementById('preview').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Preview error:', error);
+                document.getElementById('emailPreview').innerHTML = '<div class="p-8 text-red-600 bg-red-50 border border-red-200 rounded-xl">Error creating preview - check browser console</div>';
+            }
+        }
+
+        // copy complete HTML email (works in Gmail/Outlook)
+        function copyEmail() {
+            const html = document.getElementById('emailPreview').innerHTML;
+            
+            // full HTML document needed for email clients
+            const fullEmail = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Email</title>
+</head>
+<body style="margin:0;padding:24px;background:#f8fafc;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;">
+    ${html}
+</body>
+</html>`;
+
+            // The copy button sometimes fails on iPhone, so I added an alert popup
+            navigator.clipboard.writeText(fullEmail).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ Copied to clipboard!';
+                btn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+                btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    btn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                }, 2200);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                alert('Copy failed on this browser - please select preview text and press Ctrl+C');
+            });
+        }
+
+        // show/hide preview section
+        function togglePreview() {
+            const preview = document.getElementById('preview');
+            preview.classList.toggle('hidden');
+        }
+
+        // set default values when page loads
+        window.onload = function() {
+            document.getElementById('name').value = 'Diwakar Panda';
+            document.getElementById('position').value = 'Web Developer';
+            document.getElementById('details').value = 'Feb 25th, 2 PM ';
+            document.getElementById('custom').value = 'Please come 15 mins early for technical setup test';
+            
+            // show preview immediately with defaults
+            generateEmail();
+        };
+    </script>
+</body>
+</html>
